@@ -73,5 +73,17 @@
         <span *ngIf="isLoading" class="loader"></span>
       </button>
     </form>
+
+    <div class="quick-login-divider">Quick Test Login</div>
+    <div class="quick-login-buttons">
+      <button type="button" class="quick-btn" (click)="loginAsDummy('student')">
+        <span>🎓 Student Demo</span>
+        <span class="btn-subtitle">Alex Student</span>
+      </button>
+      <button type="button" class="quick-btn" (click)="loginAsDummy('teacher')">
+        <span>👨‍🏫 Teacher Demo</span>
+        <span class="btn-subtitle">Dr. Smith</span>
+      </button>
+    </div>
   </div>
 </div>

@@ -10,6 +10,13 @@ export class UserController {
     return this.userService.createOrLogin(body.email, body.name, body.role);
   }
 
+  @Post('register')
+  async register(
+    @Body() body: { email: string; name: string; role: string; bio?: string; skills?: string[] }
+  ) {
+    return this.userService.register(body.email, body.name, body.role, body.bio, body.skills);
+  }
+
   @Get('teachers')
   async getTeachers() {
     return this.userService.findAllTeachers();

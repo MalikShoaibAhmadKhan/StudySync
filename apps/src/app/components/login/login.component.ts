@@ -46,4 +46,17 @@ export class LoginComponent {
       },
     });
   }
+
+  loginAsDummy(role: 'student' | 'teacher') {
+    if (role === 'student') {
+      this.name = 'Alex Student';
+      this.email = 'student@studysync.com';
+      this.role = 'student';
+    } else {
+      this.name = 'Dr. Smith (Tutor)';
+      this.email = 'teacher@studysync.com';
+      this.role = 'teacher';
+    }
+    this.onSubmit();
+  }
 }

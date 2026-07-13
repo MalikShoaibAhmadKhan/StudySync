@@ -266,3 +266,73 @@
   25% { transform: translateX(-4px); }
   75% { transform: translateX(4px); }
 }
+
+/* Quick Test Login Styles */
+.quick-login-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #5d6174;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin: 1.75rem 0 1.25rem;
+}
+
+.quick-login-divider::before,
+.quick-login-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.quick-login-divider:not(:empty)::before {
+  margin-right: .75em;
+}
+
+.quick-login-divider:not(:empty)::after {
+  margin-left: .75em;
+}
+
+.quick-login-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.quick-btn {
+  padding: 12px 10px;
+  background: rgba(108, 92, 231, 0.08);
+  border: 1px dashed rgba(108, 92, 231, 0.35);
+  border-radius: 12px;
+  color: #b2aef2;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.25s ease;
+  outline: none;
+}
+
+.quick-btn:hover {
+  background: rgba(108, 92, 231, 0.18);
+  border-style: solid;
+  border-color: #6c5ce7;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(108, 92, 231, 0.15);
+}
+
+.quick-btn:active {
+  transform: translateY(0);
+}
+
+.quick-btn .btn-subtitle {
+  font-size: 10px;
+  color: #83889b;
+  font-weight: 400;
+}
