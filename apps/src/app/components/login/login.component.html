@@ -1,0 +1,77 @@
+<div class="login-container">
+  <div class="background-decor">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+  </div>
+
+  <div class="login-card">
+    <div class="brand">
+      <div class="logo-icon">SS</div>
+      <h1>StudySync</h1>
+      <p class="tagline">Real-Time Collaborative Learning Platform</p>
+    </div>
+
+    <form (submit)="onSubmit()" class="login-form">
+      <div class="input-group">
+        <label for="name">Full Name</label>
+        <div class="input-wrapper">
+          <input
+            type="text"
+            id="name"
+            name="name"
+            [(ngModel)]="name"
+            placeholder="John Doe"
+            required
+            autocomplete="off"
+          />
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label for="email">Email Address</label>
+        <div class="input-wrapper">
+          <input
+            type="email"
+            id="email"
+            name="email"
+            [(ngModel)]="email"
+            placeholder="johndoe@example.com"
+            required
+            autocomplete="off"
+          />
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>I want to join as a:</label>
+        <div class="role-selector">
+          <button
+            type="button"
+            [class.active]="role === 'student'"
+            (click)="role = 'student'"
+            class="role-btn"
+          >
+            <span class="role-icon">🎓</span> Student
+          </button>
+          <button
+            type="button"
+            [class.active]="role === 'teacher'"
+            (click)="role = 'teacher'"
+            class="role-btn"
+          >
+            <span class="role-icon">👨‍🏫</span> Teacher
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="errorMsg" class="error-message">
+        <span class="error-icon">⚠️</span> {{ errorMsg }}
+      </div>
+
+      <button type="submit" class="submit-btn" [disabled]="isLoading">
+        <span *ngIf="!isLoading">Get Started</span>
+        <span *ngIf="isLoading" class="loader"></span>
+      </button>
+    </form>
+  </div>
+</div>

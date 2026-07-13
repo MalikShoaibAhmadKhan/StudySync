@@ -1,0 +1,365 @@
+<div class="dashboard-wrapper">
+  <!-- Top Navigation -->
+  <header class="top-nav">
+    <div class="brand">
+      <span class="logo-icon">SS</span>
+      <h2>StudySync</h2>
+    </div>
+    <div class="user-meta" *ngIf="user">
+      <div class="user-avatar">{{ user.name.slice(0, 2).toUpperCase() }}</div>
+      <div class="user-info">
+        <span class="user-name">{{ user.name }}</span>
+        <span class="user-role badge">{{ user.role | titlecase }}</span>
+      </div>
+      <button (click)="logout()" class="logout-btn" title="Sign Out">
+        <span class="icon">🚪</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="main-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <nav class="sidebar-nav">
+        <button
+          [class.active]="activeTab === 'classes'"
+          (click)="activeTab = 'classes'"
+          class="nav-item"
+        >
+          <span class="nav-icon">🏫</span>
+          <span class="nav-text">Classrooms</span>
+        </button>
+        <button
+          [class.active]="activeTab === 'bookings'"
+          (click)="activeTab = 'bookings'"
+          class="nav-item"
+        >
+          <span class="nav-icon">📅</span>
+          <span class="nav-text">Tuitions & Bookings</span>
+        </button>
+        <button
+          [class.active]="activeTab === 'profile'"
+          (click)="activeTab = 'profile'"
+          class="nav-item"
+        >
+          <span class="nav-icon">👤</span>
+          <span class="nav-text">Profile Settings</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- Main Content Panel -->
+    <main class="content-panel">
+      <!-- CLASSES TAB -->
+      <section *ngIf="activeTab === 'classes'" class="tab-section">
+        <div class="section-header">
+          <div>
+            <h3>Active & Scheduled Classrooms</h3>
+            <p class="section-desc">Join collaborative sessions or start a new classroom</p>
+          </div>
+          <div class="actions-group">
+            <button
+              *ngIf="user?.role === 'teacher'"
+              (click)="showCreateModal = true"
+              class="primary-btn"
+            >
+              ➕ Create Classroom
+            </button>
+            <button
+              *ngIf="user?.role === 'student'"
+              (click)="showJoinPrivateModal = true"
+              class="secondary-btn"
+            >
+              🔑 Join Private Room
+            </button>
+          </div>
+        </div>
+
+        <div class="classroom-grid" *ngIf="classrooms.length > 0; else noClassrooms">
+          <div class="class-card" *ngFor="let c of classrooms">
+            <div class="card-header">
+              <span
+                class="status-badge"
+                [class.live]="c.status === 'live'"
+                [class.scheduled]="c.status === 'scheduled'"
+                [class.ended]="c.status === 'ended'"
+              >
+                <span class="dot" *ngIf="c.status === 'live'"></span>
+                {{ c.status | uppercase }}
+              </span>
+              <span class="type-badge">{{ c.type.replace('_', ' ') | titlecase }}</span>
+            </div>
+
+            <div class="card-body">
+              <h4>{{ c.title }}</h4>
+              <p class="desc">{{ c.description || 'No description provided.' }}</p>
+              <div class="meta-row">
+                <span class="meta-item"><strong>Host:</strong> {{ c.creatorId?.name || 'User' }}</span>
+                <span class="meta-item"><strong>Time:</strong> {{ formatDate(c.scheduledTime) }}</span>
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <button
+                *ngIf="user?.role === 'teacher' && c.creatorId?._id === user?._id && c.status !== 'ended'"
+                (click)="handleJoinRoom(c._id)"
+                class="card-action-btn start"
+              >
+                {{ c.status === 'live' ? 'Resume Class' : 'Start Class' }}
+              </button>
+              <button
+                *ngIf="(user?.role === 'student' || c.creatorId?._id !== user?._id) && c.status !== 'ended'"
+                (click)="handleJoinRoom(c._id)"
+                class="card-action-btn join"
+              >
+                Join Classroom
+              </button>
+              <span *ngIf="c.status === 'ended'" class="ended-label">Class Ended</span>
+            </div>
+          </div>
+        </div>
+        <ng-template #noClassrooms>
+          <div class="empty-state">
+            <div class="empty-icon">🎒</div>
+            <h4>No Classrooms Scheduled</h4>
+            <p>Create a class or book a session with a teacher to get started.</p>
+          </div>
+        </ng-template>
+      </section>
+
+      <!-- BOOKINGS TAB -->
+      <section *ngIf="activeTab === 'bookings'" class="tab-section">
+        <!-- STUDENT BOOKINGS VIEW -->
+        <div *ngIf="user?.role === 'student'">
+          <div class="section-header">
+            <div>
+              <h3>Book a Private Tuition</h3>
+              <p class="section-desc">Schedule live 1-on-1 personalized classes with professional teachers</p>
+            </div>
+          </div>
+
+          <!-- Teachers Directory -->
+          <h4 class="sub-section-title">Available Teachers</h4>
+          <div class="teachers-grid" *ngIf="teachers.length > 0; else noTeachers">
+            <div class="teacher-card" *ngFor="let t of teachers">
+              <div class="teacher-avatar">{{ t.name.slice(0, 2).toUpperCase() }}</div>
+              <h5>{{ t.name }}</h5>
+              <p class="bio">{{ t.bio || 'No biography added yet.' }}</p>
+              <div class="skills-tags">
+                <span class="skill-tag" *ngFor="let skill of t.skills">{{ skill }}</span>
+              </div>
+              <button (click)="openBookModal(t)" class="book-btn">📅 Book 1-on-1</button>
+            </div>
+          </div>
+          <ng-template #noTeachers>
+            <p class="info-alert">No teachers registered on the platform currently.</p>
+          </ng-template>
+
+          <!-- Booked Tuitions Schedule -->
+          <h4 class="sub-section-title mt-4">My Booked Sessions</h4>
+          <div class="bookings-list" *ngIf="bookings.length > 0; else noBookings">
+            <div class="booking-row" *ngFor="let b of bookings">
+              <div class="booking-details">
+                <strong>Teacher:</strong> {{ b.teacherId?.name }} <br />
+                <span class="text-muted">Time: {{ formatDate(b.scheduledTime) }}</span>
+              </div>
+              <div class="booking-status">
+                <span class="status-badge" [class]="b.status">{{ b.status | uppercase }}</span>
+              </div>
+              <div class="booking-action">
+                <button
+                  *ngIf="b.status === 'confirmed' && b.classroomId"
+                  (click)="handleJoinRoom(b.classroomId._id || b.classroomId)"
+                  class="join-class-btn"
+                >
+                  🚀 Go to Room
+                </button>
+              </div>
+            </div>
+          </div>
+          <ng-template #noBookings>
+            <p class="info-alert">No scheduled booking sessions found.</p>
+          </ng-template>
+        </div>
+
+        <!-- TEACHER BOOKINGS VIEW -->
+        <div *ngIf="user?.role === 'teacher'">
+          <div class="section-header">
+            <div>
+              <h3>Private Tuition Bookings</h3>
+              <p class="section-desc">Manage your 1-on-1 private tuition schedules and requests</p>
+            </div>
+          </div>
+
+          <div class="bookings-list" *ngIf="bookings.length > 0; else noTeacherBookings">
+            <div class="booking-row" *ngFor="let b of bookings">
+              <div class="booking-details">
+                <strong>Student:</strong> {{ b.studentId?.name }} <br />
+                <span class="text-muted">Time: {{ formatDate(b.scheduledTime) }}</span>
+              </div>
+              <div class="booking-status">
+                <span class="status-badge" [class]="b.status">{{ b.status | uppercase }}</span>
+              </div>
+              <div class="booking-action" *ngIf="b.status === 'pending'">
+                <button (click)="handleBookingResponse(b._id, 'confirmed')" class="approve-btn">Approve</button>
+                <button (click)="handleBookingResponse(b._id, 'cancelled')" class="cancel-btn">Decline</button>
+              </div>
+              <div class="booking-action" *ngIf="b.status === 'confirmed' && b.classroomId">
+                <button
+                  (click)="handleJoinRoom(b.classroomId._id || b.classroomId)"
+                  class="join-class-btn"
+                >
+                  🚀 Start Room
+                </button>
+              </div>
+            </div>
+          </div>
+          <ng-template #noTeacherBookings>
+            <div class="empty-state">
+              <div class="empty-icon">📂</div>
+              <h4>No Tuition Bookings</h4>
+              <p>When students book 1-on-1 classes with you, they will appear here.</p>
+            </div>
+          </ng-template>
+        </div>
+      </section>
+
+      <!-- PROFILE TAB -->
+      <section *ngIf="activeTab === 'profile'" class="tab-section">
+        <div class="section-header">
+          <div>
+            <h3>Profile Settings</h3>
+            <p class="section-desc">Update your personal teacher/student profile details</p>
+          </div>
+        </div>
+
+        <div class="profile-card">
+          <form (submit)="updateProfile()" class="profile-form">
+            <div class="form-group">
+              <label for="prof-name">Full Name</label>
+              <input type="text" id="prof-name" name="profileName" [(ngModel)]="profileName" required />
+            </div>
+
+            <div class="form-group">
+              <label for="prof-bio">Short Bio</label>
+              <textarea
+                id="prof-bio"
+                name="profileBio"
+                [(ngModel)]="profileBio"
+                rows="4"
+                placeholder="Tell us about yourself..."
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="prof-skills">Skills / Subjects (comma-separated)</label>
+              <input
+                type="text"
+                id="prof-skills"
+                name="profileSkillsStr"
+                [(ngModel)]="profileSkillsStr"
+                placeholder="Mathematics, Physics, Chemistry"
+              />
+            </div>
+
+            <button type="submit" class="save-profile-btn">Save Changes</button>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: CREATE CLASSROOM -->
+  <div class="modal-overlay" *ngIf="showCreateModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h4>Create New Classroom</h4>
+        <button (click)="showCreateModal = false" class="close-modal-btn">✕</button>
+      </div>
+      <form (submit)="handleCreateClassroom()" class="modal-form">
+        <div class="form-group">
+          <label for="c-title">Class Title</label>
+          <input type="text" id="c-title" name="newClassTitle" [(ngModel)]="newClassTitle" required placeholder="e.g. Calculus I - Introduction" />
+        </div>
+        <div class="form-group">
+          <label for="c-desc">Description</label>
+          <textarea id="c-desc" name="newClassDesc" [(ngModel)]="newClassDesc" rows="3" placeholder="What will be covered..."></textarea>
+        </div>
+        <div class="form-group-row">
+          <div class="form-group">
+            <label for="c-type">Class Type</label>
+            <select id="c-type" name="newClassType" [(ngModel)]="newClassType">
+              <option value="public_class">Public Classroom</option>
+              <option value="one_on_one">1-on-1 Study Room</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="c-time">Scheduled Time</label>
+            <input type="datetime-local" id="c-time" name="newClassTime" [(ngModel)]="newClassTime" required />
+          </div>
+        </div>
+        <div class="form-checkbox">
+          <input type="checkbox" id="c-private" name="newClassPrivate" [(ngModel)]="newClassPrivate" />
+          <label for="c-private">Make this Classroom Private (Passcode Protected)</label>
+        </div>
+        <div class="form-group" *ngIf="newClassPrivate">
+          <label for="c-passcode">Access Passcode</label>
+          <input type="text" id="c-passcode" name="newClassPasscode" [(ngModel)]="newClassPasscode" required placeholder="e.g. MATH101" />
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" (click)="showCreateModal = false" class="cancel-btn">Cancel</button>
+          <button type="submit" class="submit-btn">Create Class</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: BOOK 1-ON-1 -->
+  <div class="modal-overlay" *ngIf="showBookModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h4>Book 1-on-1 with {{ selectedTeacher?.name }}</h4>
+        <button (click)="showBookModal = false" class="close-modal-btn">✕</button>
+      </div>
+      <form (submit)="handleBookTeacher()" class="modal-form">
+        <p class="modal-desc">Schedule a personalized private tuition session. The session will appear on your schedule once approved.</p>
+        <div class="form-group">
+          <label for="b-time">Select Date & Time</label>
+          <input type="datetime-local" id="b-time" name="bookingTime" [(ngModel)]="bookingTime" required />
+        </div>
+        <div class="modal-actions">
+          <button type="button" (click)="showBookModal = false" class="cancel-btn">Cancel</button>
+          <button type="submit" class="submit-btn">Send Booking Request</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: JOIN PRIVATE CLASSROOM -->
+  <div class="modal-overlay" *ngIf="showJoinPrivateModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h4>Join Private Classroom</h4>
+        <button (click)="showJoinPrivateModal = false" class="close-modal-btn">✕</button>
+      </div>
+      <form (submit)="handleJoinPrivateSubmit()" class="modal-form">
+        <div class="form-group">
+          <label for="join-id">Classroom Room ID</label>
+          <input type="text" id="join-id" name="joinClassId" [(ngModel)]="joinClassId" required placeholder="Enter Classroom ObjectId" />
+        </div>
+        <div class="form-group">
+          <label for="join-pass">Passcode</label>
+          <input type="password" id="join-pass" name="joinClassPasscode" [(ngModel)]="joinClassPasscode" required placeholder="Enter Passcode" />
+        </div>
+        <div *ngIf="joinError" class="error-message">
+          <span>⚠️</span> {{ joinError }}
+        </div>
+        <div class="modal-actions">
+          <button type="button" (click)="showJoinPrivateModal = false" class="cancel-btn">Cancel</button>
+          <button type="submit" class="submit-btn">Join Room</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

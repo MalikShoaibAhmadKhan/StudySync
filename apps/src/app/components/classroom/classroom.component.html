@@ -1,0 +1,145 @@
+<div class="classroom-wrapper" *ngIf="classroom">
+  <!-- Classroom Header -->
+  <header class="room-header">
+    <div class="room-info">
+      <span class="logo-icon">SS</span>
+      <div>
+        <h3>{{ classroom.title }}</h3>
+        <p class="type-badge">{{ classroom.type.replace('_', ' ') | titlecase }}</p>
+      </div>
+    </div>
+
+    <!-- Media Settings & Controls -->
+    <div class="control-panel">
+      <button (click)="toggleMute()" class="ctrl-btn" [class.disabled]="isMuted" title="Toggle Mic">
+        <span class="icon">{{ isMuted ? '🔇' : '🎙️' }}</span>
+        <span>{{ isMuted ? 'Unmute' : 'Mute' }}</span>
+      </button>
+
+      <button (click)="toggleVideo()" class="ctrl-btn" [class.disabled]="isVideoOff" title="Toggle Camera">
+        <span class="icon">{{ isVideoOff ? '📷' : '📹' }}</span>
+        <span>{{ isVideoOff ? 'Start Video' : 'Stop Video' }}</span>
+      </button>
+
+      <button
+        *ngIf="user?.role === 'teacher' && classroom.creatorId?._id === user?._id"
+        (click)="handleEndClass()"
+        class="ctrl-btn end-btn"
+      >
+        🛑 End Class
+      </button>
+
+      <button
+        *ngIf="user?.role === 'student' || classroom.creatorId?._id !== user?._id"
+        (click)="handleLeaveRoom()"
+        class="ctrl-btn leave-btn"
+      >
+        🚪 Leave Room
+      </button>
+    </div>
+  </header>
+
+  <!-- Workspace Split Grid -->
+  <div class="room-workspace">
+    <!-- Left: Canvas Whiteboard -->
+    <div class="whiteboard-area">
+      <div class="whiteboard-toolbar">
+        <div class="tool-group">
+          <label>Colors:</label>
+          <div class="color-options">
+            <button
+              *ngFor="let color of ['#6c5ce7', '#00cec9', '#0984e3', '#00b894', '#ff7675', '#ffffff']"
+              [style.background-color]="color"
+              [class.active]="brushColor === color"
+              (click)="brushColor = color"
+              class="color-btn"
+            ></button>
+          </div>
+        </div>
+
+        <div class="tool-group">
+          <label for="brush-size">Size: {{ brushSize }}px</label>
+          <input
+            type="range"
+            id="brush-size"
+            min="2"
+            max="12"
+            step="1"
+            [(ngModel)]="brushSize"
+          />
+        </div>
+
+        <button (click)="clearCanvas()" class="clear-btn">🧹 Clear Canvas</button>
+      </div>
+
+      <div class="canvas-container">
+        <canvas
+          #whiteboardCanvas
+          (mousedown)="startDrawing($event)"
+          (mousemove)="draw($event)"
+          (mouseup)="stopDrawing()"
+          (mouseleave)="stopDrawing()"
+        ></canvas>
+      </div>
+    </div>
+
+    <!-- Right: Collaboration Sidebar (Video feeds + Chat) -->
+    <aside class="collab-sidebar">
+      <!-- Video Feeds Section -->
+      <section class="video-section">
+        <div class="video-grid">
+          <!-- Local Video Feed -->
+          <div class="video-feed-card local">
+            <video #localVideo autoplay playsinline muted [class.hidden]="isVideoOff"></video>
+            <div class="video-placeholder" *ngIf="isVideoOff">
+              <span class="avatar-placeholder">{{ user?.name?.slice(0, 2)?.toUpperCase() }}</span>
+            </div>
+            <div class="user-label">You ({{ user?.name }})</div>
+          </div>
+
+          <!-- Remote Video Feeds -->
+          <div class="video-feed-card remote" *ngFor="let f of remoteFeeds">
+            <!-- Programmatically attach sourceObject -->
+            <video
+              [srcObject]="f.stream"
+              autoplay
+              playsinline
+              [class.hidden]="false"
+            ></video>
+            <div class="user-label">{{ f.userName }}</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Live Chat Section -->
+      <section class="chat-section">
+        <h4 class="chat-title">Live Chat</h4>
+        <div class="chat-history">
+          <div
+            *ngFor="let m of chatMessages"
+            class="chat-bubble-wrapper"
+            [class.self]="m.isSelf"
+          >
+            <div class="chat-meta">
+              <span class="sender-name">{{ m.userName }}</span>
+              <span class="time">{{ m.timestamp | date: 'shortTime' }}</span>
+            </div>
+            <div class="chat-bubble">{{ m.text }}</div>
+          </div>
+        </div>
+
+        <form (submit)="sendChatMessage()" class="chat-input-form">
+          <input
+            type="text"
+            name="newMessageText"
+            [(ngModel)]="newMessageText"
+            placeholder="Type a message..."
+            autocomplete="off"
+            required
+          />
+          <button type="submit" class="send-message-btn">Send</button>
+        </form>
+      </section>
+    </aside>
+  </div>
+</div>
