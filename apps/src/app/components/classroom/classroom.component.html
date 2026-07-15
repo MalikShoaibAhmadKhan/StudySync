@@ -41,47 +41,225 @@
 
   <!-- Workspace Split Grid -->
   <div class="room-workspace">
-    <!-- Left: Canvas Whiteboard -->
-    <div class="whiteboard-area">
-      <div class="whiteboard-toolbar">
-        <div class="tool-group">
-          <label>Colors:</label>
-          <div class="color-options">
+    <!-- Left Workspace Area (Tabbed Pane) -->
+    <div class="workspace-area">
+      <!-- Workspace Navigation Tabs -->
+      <div class="workspace-tabs-header">
+        <button
+          class="w-tab-btn"
+          [class.active]="activeWorkspaceTab === 'whiteboard'"
+          (click)="activeWorkspaceTab = 'whiteboard'"
+        >
+          <span class="tab-icon">🎨</span> Whiteboard
+        </button>
+        <button
+          class="w-tab-btn"
+          [class.active]="activeWorkspaceTab === 'editor'"
+          (click)="activeWorkspaceTab = 'editor'"
+        >
+          <span class="tab-icon">📝</span> Shared Note & Code
+        </button>
+        <button
+          class="w-tab-btn"
+          [class.active]="activeWorkspaceTab === 'quizzes'"
+          (click)="activeWorkspaceTab = 'quizzes'"
+        >
+          <span class="tab-icon">📊</span> Live Polls
+        </button>
+      </div>
+
+      <!-- TAB 1: WHITEBOARD -->
+      <div class="tab-pane whiteboard-pane" [class.active-pane]="activeWorkspaceTab === 'whiteboard'">
+        <div class="whiteboard-toolbar">
+          <div class="tool-group">
+            <label>Colors:</label>
+            <div class="color-options">
+              <button
+                *ngFor="let color of ['#6c5ce7', '#00cec9', '#0984e3', '#00b894', '#ff7675', '#ffffff']"
+                [style.background-color]="color"
+                [class.active]="brushColor === color"
+                (click)="brushColor = color"
+                class="color-btn"
+              ></button>
+            </div>
+          </div>
+
+          <div class="tool-group">
+            <label for="brush-size">Size: {{ brushSize }}px</label>
+            <input
+              type="range"
+              id="brush-size"
+              min="2"
+              max="12"
+              step="1"
+              [(ngModel)]="brushSize"
+            />
+          </div>
+
+          <button (click)="clearCanvas()" class="clear-btn">🧹 Clear Canvas</button>
+        </div>
+
+        <div class="canvas-container">
+          <canvas
+            #whiteboardCanvas
+            (mousedown)="startDrawing($event)"
+            (mousemove)="draw($event)"
+            (mouseup)="stopDrawing()"
+            (mouseleave)="stopDrawing()"
+          ></canvas>
+        </div>
+      </div>
+
+      <!-- TAB 2: SHARED NOTE & CODE EDITOR -->
+      <div class="tab-pane editor-pane" [class.active-pane]="activeWorkspaceTab === 'editor'">
+        <div class="editor-toolbar">
+          <div class="tool-group">
+            <label for="lang-select">Language Mode:</label>
+            <select id="lang-select" [(ngModel)]="editorLanguage" (change)="onLanguageChange()" class="editor-select">
+              <option value="markdown">Plain Text (Markdown Preview)</option>
+              <option value="html">HTML Code Preview</option>
+              <option value="javascript">JavaScript / TypeScript</option>
+              <option value="python">Python</option>
+              <option value="css">CSS</option>
+            </select>
+          </div>
+          <span class="sync-badge">
+            <span class="pulse-dot"></span> Live Sync Enabled
+          </span>
+        </div>
+
+        <div class="editor-grid">
+          <!-- Textarea Editor -->
+          <div class="editor-textarea-wrapper">
+            <textarea
+              [(ngModel)]="editorCode"
+              (input)="onCodeEditorInput()"
+              class="editor-textarea"
+              placeholder="Collaborate by writing notes or code here..."
+            ></textarea>
+          </div>
+
+          <!-- Live Preview Side-Panel (Markdown / HTML) -->
+          <div class="editor-preview-wrapper" *ngIf="editorLanguage === 'markdown' || editorLanguage === 'html'">
+            <div class="preview-header">Live Preview Panel</div>
+            <div class="preview-body" [innerHTML]="getMarkdownPreview()"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: LIVE POLLS / QUIZZES -->
+      <div class="tab-pane quizzes-pane" [class.active-pane]="activeWorkspaceTab === 'quizzes'">
+        <!-- TEACHER CONTROL BOARD -->
+        <div class="teacher-poll-creator" *ngIf="user?.role === 'teacher' && !activeQuiz">
+          <h4>Create & Launch a Classroom Poll</h4>
+          <p class="section-hint">Interact with your students by asking live questions.</p>
+          
+          <div class="form-group">
+            <label for="poll-question">Question Prompt</label>
+            <input
+              type="text"
+              id="poll-question"
+              [(ngModel)]="quizQuestion"
+              placeholder="e.g. What is the value of x in 2x + 5 = 15?"
+              class="poll-input"
+            />
+          </div>
+
+          <div class="poll-options-builder">
+            <label>Options</label>
+            <div class="option-builder-row" *ngFor="let opt of quizOptions; let i = index">
+              <span class="option-letter">{{ i + 1 }}.</span>
+              <input
+                type="text"
+                [(ngModel)]="quizOptions[i]"
+                placeholder="Enter option answer..."
+                class="poll-input option-val"
+              />
+              <button
+                type="button"
+                *ngIf="quizOptions.length > 2"
+                (click)="removeQuizOption(i)"
+                class="remove-opt-btn"
+                title="Remove Option"
+              >✕</button>
+            </div>
+            
             <button
-              *ngFor="let color of ['#6c5ce7', '#00cec9', '#0984e3', '#00b894', '#ff7675', '#ffffff']"
-              [style.background-color]="color"
-              [class.active]="brushColor === color"
-              (click)="brushColor = color"
-              class="color-btn"
-            ></button>
+              type="button"
+              *ngIf="quizOptions.length < 6"
+              (click)="addQuizOption()"
+              class="add-opt-btn"
+            >➕ Add Option</button>
+          </div>
+
+          <button (click)="handleLaunchQuiz()" class="launch-poll-btn">🚀 Broadcast Live Poll</button>
+        </div>
+
+        <!-- ACTIVE POLL STATUS (For Teachers / Voters) -->
+        <div class="active-poll-container" *ngIf="activeQuiz">
+          <div class="poll-card-header">
+            <span class="live-badge"><span class="pulse-dot"></span> LIVE POLL</span>
+            <h3>{{ activeQuiz.question }}</h3>
+          </div>
+
+          <!-- STUDENT OPTION VOTING VIEW -->
+          <div class="poll-voting-options" *ngIf="user?.role === 'student' && !activeQuiz.hasVoted">
+            <p class="hint-text">Select one of the answers below:</p>
+            <button
+              *ngFor="let opt of activeQuiz.options; let idx = index"
+              (click)="handleVoteSubmit(idx)"
+              class="vote-option-card"
+            >
+              <span class="badge-letter">{{ idx + 1 }}</span>
+              <span class="option-text">{{ opt }}</span>
+            </button>
+          </div>
+
+          <!-- RESULTS CHART VIEW (Show to teacher always, and to student after they voted) -->
+          <div class="poll-results-chart" *ngIf="user?.role === 'teacher' || activeQuiz.hasVoted">
+            <p class="hint-text">Real-time Responses (Total Votes: {{ activeQuiz.totalVotes }})</p>
+            
+            <div class="result-bar-wrapper" *ngFor="let opt of activeQuiz.options; let idx = index">
+              <div class="result-bar-labels">
+                <span class="opt-label">{{ opt }}</span>
+                <span class="opt-stats">
+                  {{ activeQuiz.votes[idx] }} {{ activeQuiz.votes[idx] === 1 ? 'vote' : 'votes' }} 
+                  ({{ getOptionPercentage(idx) }}%)
+                </span>
+              </div>
+              <div class="progress-track">
+                <div
+                  class="progress-fill"
+                  [style.width.%]="getOptionPercentage(idx)"
+                  [class.voted-by-me]="activeQuiz.votedIndex === idx"
+                ></div>
+              </div>
+            </div>
+            
+            <div class="voted-alert" *ngIf="user?.role === 'student'">
+              ✅ Thank you! Your vote has been recorded.
+            </div>
+          </div>
+
+          <!-- TEACHER END POLL BUTTON -->
+          <div class="teacher-actions mt-4" *ngIf="user?.role === 'teacher'">
+            <button (click)="handleEndQuiz()" class="end-poll-btn">🛑 Close Poll</button>
           </div>
         </div>
 
-        <div class="tool-group">
-          <label for="brush-size">Size: {{ brushSize }}px</label>
-          <input
-            type="range"
-            id="brush-size"
-            min="2"
-            max="12"
-            step="1"
-            [(ngModel)]="brushSize"
-          />
+        <!-- NO ACTIVE POLL WAITING VIEW (For Students) -->
+        <div class="waiting-poll-container" *ngIf="user?.role === 'student' && !activeQuiz">
+          <div class="loading-poll-waves">
+            <div class="wave"></div>
+            <div class="wave"></div>
+            <div class="wave"></div>
+          </div>
+          <h4>Waiting for your tutor to start a poll...</h4>
+          <p>Questions and multiple-choice answers will appear here in real-time.</p>
         </div>
-
-        <button (click)="clearCanvas()" class="clear-btn">🧹 Clear Canvas</button>
-      </div>
-
-      <div class="canvas-container">
-        <canvas
-          #whiteboardCanvas
-          (mousedown)="startDrawing($event)"
-          (mousemove)="draw($event)"
-          (mouseup)="stopDrawing()"
-          (mouseleave)="stopDrawing()"
-        ></canvas>
       </div>
     </div>
+
 
     <!-- Right: Collaboration Sidebar (Video feeds + Chat) -->
     <aside class="collab-sidebar">

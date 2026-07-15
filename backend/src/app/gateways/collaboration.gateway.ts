@@ -148,4 +148,50 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       timestamp: new Date(),
     });
   }
+
+  @SubscribeMessage('code-change')
+  handleCodeChange(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { classroomId: string; code: string; language: string }
+  ) {
+    // Broadcast code edits to all other clients in the classroom room
+    client.to(data.classroomId).emit('code-change', {
+      code: data.code,
+      language: data.language,
+    });
+  }
+
+  @SubscribeMessage('launch-quiz')
+  handleLaunchQuiz(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { classroomId: string; question: string; options: string[] }
+  ) {
+    // Broadcast quiz details when teacher launches it
+    client.to(data.classroomId).emit('quiz-launched', {
+      question: data.question,
+      options: data.options,
+    });
+  }
+
+  @SubscribeMessage('submit-vote')
+  handleSubmitVote(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { classroomId: string; optionIndex: number; userId: string }
+  ) {
+    // Broadcast student vote submissions to all participants
+    this.server.to(data.classroomId).emit('vote-submitted', {
+      optionIndex: data.optionIndex,
+      userId: data.userId,
+    });
+  }
+
+  @SubscribeMessage('end-quiz')
+  handleEndQuiz(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { classroomId: string }
+  ) {
+    // Broadcast ending of current quiz
+    client.to(data.classroomId).emit('quiz-ended');
+  }
 }
+

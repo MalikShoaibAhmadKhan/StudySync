@@ -135,4 +135,67 @@ export class SocketService {
       return () => this.socket.off('signal-returned');
     });
   }
+
+  // Shared Code Editor Emitters and Listeners
+  sendCodeChange(classroomId: string, code: string, language: string) {
+    if (this.socket) {
+      this.socket.emit('code-change', { classroomId, code, language });
+    }
+  }
+
+  onCodeChange(): Observable<{ code: string; language: string }> {
+    return new Observable((observer) => {
+      this.socket.on('code-change', (data) => {
+        observer.next(data);
+      });
+      return () => this.socket.off('code-change');
+    });
+  }
+
+  // Polling / Quiz System Emitters and Listeners
+  launchQuiz(classroomId: string, question: string, options: string[]) {
+    if (this.socket) {
+      this.socket.emit('launch-quiz', { classroomId, question, options });
+    }
+  }
+
+  onQuizLaunched(): Observable<{ question: string; options: string[] }> {
+    return new Observable((observer) => {
+      this.socket.on('quiz-launched', (data) => {
+        observer.next(data);
+      });
+      return () => this.socket.off('quiz-launched');
+    });
+  }
+
+  submitVote(classroomId: string, optionIndex: number, userId: string) {
+    if (this.socket) {
+      this.socket.emit('submit-vote', { classroomId, optionIndex, userId });
+    }
+  }
+
+  onVoteSubmitted(): Observable<{ optionIndex: number; userId: string }> {
+    return new Observable((observer) => {
+      this.socket.on('vote-submitted', (data) => {
+        observer.next(data);
+      });
+      return () => this.socket.off('vote-submitted');
+    });
+  }
+
+  endQuiz(classroomId: string) {
+    if (this.socket) {
+      this.socket.emit('end-quiz', { classroomId });
+    }
+  }
+
+  onQuizEnded(): Observable<void> {
+    return new Observable((observer) => {
+      this.socket.on('quiz-ended', () => {
+        observer.next();
+      });
+      return () => this.socket.off('quiz-ended');
+    });
+  }
 }
+

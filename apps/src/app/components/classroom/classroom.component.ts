@@ -25,6 +25,26 @@ export class ClassroomComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('localVideo') localVideoRef!: ElementRef<HTMLVideoElement>;
 
   user: User | null = null;
+
+  // Workspace Tabs
+  activeWorkspaceTab: 'whiteboard' | 'editor' | 'quizzes' = 'whiteboard';
+
+  // Collaborative Code/Note Editor
+  editorCode = 'Welcome to the Collaborative Notepad & Code Editor!\nType here and it will sync in real-time.\n\nSelect a language drop-down above (e.g. Markdown) to enable preview mode!';
+  editorLanguage = 'markdown';
+  private isIncomingRemoteCode = false;
+
+  // Quiz / Polling System
+  quizQuestion = '';
+  quizOptions: string[] = ['', ''];
+  activeQuiz: {
+    question: string;
+    options: string[];
+    votes: number[];
+    hasVoted: boolean;
+    votedIndex?: number;
+    totalVotes: number;
+  } | null = null;
   classroom: Classroom | null = null;
   classroomId: string = '';
 
@@ -213,6 +233,47 @@ export class ClassroomComponent implements OnInit, OnDestroy, AfterViewInit {
     this.subscriptions.add(
       this.socketService.onUserLeft().subscribe((data) => {
         this.closePeer(data.socketId);
+      })
+    );
+
+    // F. Collaborative Code Editor listener
+    this.subscriptions.add(
+      this.socketService.onCodeChange().subscribe((data) => {
+        this.isIncomingRemoteCode = true;
+        this.editorCode = data.code;
+        this.editorLanguage = data.language;
+        // Reset flag after change cycles
+        setTimeout(() => this.isIncomingRemoteCode = false, 50);
+      })
+    );
+
+    // G. Quiz Launched listener
+    this.subscriptions.add(
+      this.socketService.onQuizLaunched().subscribe((data) => {
+        this.activeQuiz = {
+          question: data.question,
+          options: data.options,
+          votes: new Array(data.options.length).fill(0),
+          hasVoted: false,
+          totalVotes: 0,
+        };
+      })
+    );
+
+    // H. Quiz Vote submitted listener
+    this.subscriptions.add(
+      this.socketService.onVoteSubmitted().subscribe((data) => {
+        if (this.activeQuiz) {
+          this.activeQuiz.votes[data.optionIndex]++;
+          this.activeQuiz.totalVotes++;
+        }
+      })
+    );
+
+    // I. Quiz ended listener
+    this.subscriptions.add(
+      this.socketService.onQuizEnded().subscribe(() => {
+        this.activeQuiz = null;
       })
     );
   }
@@ -419,5 +480,94 @@ export class ClassroomComponent implements OnInit, OnDestroy, AfterViewInit {
     // Unsubscribe and disconnect socket
     this.subscriptions.unsubscribe();
     this.socketService.disconnect();
+  }
+
+  // Code editor actions
+  onCodeEditorInput() {
+    if (this.isIncomingRemoteCode) return;
+    this.socketService.sendCodeChange(this.classroomId, this.editorCode, this.editorLanguage);
+  }
+
+  onLanguageChange() {
+    this.socketService.sendCodeChange(this.classroomId, this.editorCode, this.editorLanguage);
+  }
+
+  // Quiz/Poll teacher actions
+  addQuizOption() {
+    if (this.quizOptions.length < 6) {
+      this.quizOptions.push('');
+    }
+  }
+
+  removeQuizOption(index: number) {
+    if (this.quizOptions.length > 2) {
+      this.quizOptions.splice(index, 1);
+    }
+  }
+
+  handleLaunchQuiz() {
+    const question = this.quizQuestion.trim();
+    const options = this.quizOptions.map(o => o.trim()).filter(o => o.length > 0);
+
+    if (!question || options.length < 2) {
+      alert('Please fill out the question and at least two options.');
+      return;
+    }
+
+    this.activeQuiz = {
+      question,
+      options,
+      votes: new Array(options.length).fill(0),
+      hasVoted: false,
+      totalVotes: 0,
+    };
+
+    this.socketService.launchQuiz(this.classroomId, question, options);
+  }
+
+  handleVoteSubmit(optionIndex: number) {
+    if (!this.activeQuiz || this.activeQuiz.hasVoted || !this.user) return;
+
+    this.activeQuiz.hasVoted = true;
+    this.activeQuiz.votedIndex = optionIndex;
+    this.socketService.submitVote(this.classroomId, optionIndex, this.user._id);
+  }
+
+  handleEndQuiz() {
+    this.activeQuiz = null;
+    this.quizQuestion = '';
+    this.quizOptions = ['', ''];
+    this.socketService.endQuiz(this.classroomId);
+  }
+
+  getOptionPercentage(index: number): number {
+    if (!this.activeQuiz || this.activeQuiz.totalVotes === 0) return 0;
+    return Math.round((this.activeQuiz.votes[index] / this.activeQuiz.totalVotes) * 100);
+  }
+
+  getMarkdownPreview(): string {
+    if (this.editorLanguage === 'html') {
+      return this.editorCode;
+    }
+    
+    // Simple markdown-like parser for notes/markdown
+    let text = this.editorCode || '';
+    text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    
+    // Headers
+    text = text.replace(/^# (.*?)$/gm, '<h1 class="preview-h1">$1</h1>');
+    text = text.replace(/^## (.*?)$/gm, '<h2 class="preview-h2">$1</h2>');
+    text = text.replace(/^### (.*?)$/gm, '<h3 class="preview-h3">$1</h3>');
+    text = text.replace(/^- (.*?)$/gm, '<li class="preview-li">$1</li>');
+    
+    // Bold / Italic
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    text = text.replace(/`(.*?)`/g, '<code class="preview-code">$1</code>');
+    
+    // Newlines
+    text = text.replace(/\n/g, '<br>');
+    
+    return text;
   }
 }
