@@ -48,6 +48,9 @@ export class ClassroomComponent implements OnInit, OnDestroy, AfterViewInit {
   classroom: Classroom | null = null;
   classroomId: string = '';
 
+  // Confirmations
+  showEndClassConfirm = false;
+
   // Local media stream
   localStream: MediaStream | null = null;
   isMuted = false;
@@ -105,6 +108,7 @@ export class ClassroomComponent implements OnInit, OnDestroy, AfterViewInit {
       next: (res) => {
         this.classroom = res;
         this.initializeRoom();
+        setTimeout(() => this.initCanvas(), 100);
       },
       error: (err) => {
         console.error(err);
@@ -375,7 +379,13 @@ export class ClassroomComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Whiteboard drawing logic
   private initCanvas() {
+    if (!this.canvasRef) {
+      return;
+    }
     const canvas = this.canvasRef.nativeElement;
+    if (!canvas) {
+      return;
+    }
     // Set display size
     canvas.width = canvas.parentElement?.clientWidth || 800;
     canvas.height = canvas.parentElement?.clientHeight || 450;
@@ -457,12 +467,21 @@ export class ClassroomComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   handleEndClass() {
-    if (confirm('Are you sure you want to end this class for everyone?')) {
-      this.apiService.updateClassroomStatus(this.classroomId, 'ended').subscribe(() => {
+    this.showEndClassConfirm = true;
+  }
+
+  confirmEndClass() {
+    this.showEndClassConfirm = false;
+    this.apiService.updateClassroomStatus(this.classroomId, 'ended').subscribe({
+      next: () => {
         this.leaveRoom();
         this.router.navigate(['/dashboard']);
-      });
-    }
+      },
+      error: (err) => {
+        console.error('Error ending class:', err);
+        alert('Failed to end class: ' + (err.error?.message || err.message));
+      }
+    });
   }
 
   private leaveRoom() {

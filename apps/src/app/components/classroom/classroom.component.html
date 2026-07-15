@@ -320,4 +320,21 @@
       </section>
     </aside>
   </div>
+
+  <!-- Custom End Class Confirmation Modal -->
+  <div class="modal-overlay" *ngIf="showEndClassConfirm">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h4>End Classroom Session</h4>
+        <button (click)="showEndClassConfirm = false" class="close-modal-btn">✕</button>
+      </div>
+      <p class="modal-desc">
+        Are you sure you want to end this class session? All active whiteboard drawings, editor notes, and polling results will be saved, but all participants will be disconnected.
+      </p>
+      <div class="modal-actions">
+        <button (click)="showEndClassConfirm = false" class="cancel-btn">Cancel</button>
+        <button (click)="confirmEndClass()" class="submit-btn end-btn">Yes, End Class</button>
+      </div>
+    </div>
+  </div>
 </div>
